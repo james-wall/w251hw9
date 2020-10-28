@@ -1,0 +1,19 @@
+### Create Nvidia AMI images
+aws ec2 run-instances --image-id ami-050717f7d89c1247b --instance-type g4dn.2xlarge --security-group-ids sg-097ef0b27f51a2b77  --associate-public-ip-address --key-name hw09_keypair --count 4
+
+#### Logging into Ubuntu
+ssh -i "hw09_keypair.pem" ubuntu@ec2-54-193-14-146.us-west-1.compute.amazonaws.com
+# NOTE: Make sure to change the EC2 IP depending on which AMI instance you are using 
+
+### Creating mount target after creating EFS (create EFS to get file system id, get other IDs from AWS Console EC2 dashboard for the specific instance)
+aws efs create-mount-target --file-system-id fs-049cad1d --subnet-id subnet-d8a46282 --security-group sg-097ef0b27f51a2b77 --region us-west-1
+
+### IN VM
+sudo mkdir -v /data
+sudo mount -t nfs -o nfsvers=4.1,rsize=1048576,wsize=1048576,hard,timeo=600,retrans=2,noresvport 172.31.3.245:/ /data
+## Make sure you use IP from file system
+
+###
+nohup mpirun --allow-run-as-root -n 4 -H 172.31.8.77:1,172.31.10.3:1,172.31.15.97:1,172.31.7.99:1 -bind-to none -map-by slot --mca btl_tcp_if_include ens5 -x NCCL_SOCKET_IFNAME=ens5 -x NCCL_DEBUG=INFO -x LD_LIBRARY_PATH python run.py --config_file=/data/transformer-base.py --use_horovod=True --mode=train_eval &
+
+
